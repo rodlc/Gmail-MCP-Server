@@ -344,11 +344,6 @@ async function main() {
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: [
             {
-                name: "send_email",
-                description: "Sends a new email",
-                inputSchema: zodToJsonSchema(SendEmailSchema),
-            },
-            {
                 name: "draft_email",
                 description: "Draft a new email",
                 inputSchema: zodToJsonSchema(SendEmailSchema),
@@ -598,10 +593,9 @@ async function main() {
 
         try {
             switch (name) {
-                case "send_email":
                 case "draft_email": {
                     const validatedArgs = SendEmailSchema.parse(args);
-                    const action = name === "send_email" ? "send" : "draft";
+                    const action = "draft";
                     return await handleEmailAction(action, validatedArgs);
                 }
 
