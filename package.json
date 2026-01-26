@@ -54,12 +54,14 @@
     "mime-types": "^3.0.1",
     "nodemailer": "^7.0.3",
     "open": "^10.0.0",
+    "yargs": "^17.7.2",
     "zod": "^3.22.4",
     "zod-to-json-schema": "^3.22.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
     "@types/nodemailer": "^6.4.17",
+    "@types/yargs": "^17.0.32",
     "typescript": "^5.3.3"
   }
 }
