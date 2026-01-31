@@ -3,7 +3,7 @@
     "gmail": {
       "command": "node",
       "args": [
-        "D:\\BackDataService\\Gmail-MCP-Server\\dist\\index.js"
+        "/Users/rodmagic/Code/rodlc/workspace/mcp-servers/Gmail-MCP-Server/dist/index.js"
       ]
     }
   }
