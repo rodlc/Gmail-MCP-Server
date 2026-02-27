@@ -1,26 +1,113 @@
-# Gmail MCP Re-auth + AI Workshop Message
+# Gmail Re-auth + /recap Template Fix
 
+════════════════════════════════════════
 ## Context
-Gmail MCP "Login Required" — refresh tokens expirés (GCP OAuth Testing mode, 7-day limit).
-Objectif : ré-auth Gmail → rechercher emails "hoji" → préparer message à Stéphane & JC sur le workshop IA mardi 3 mars PM.
+════════════════════════════════════════
+Session initiale : Gmail re-auth + draft workshop Hoji (complété).
+Constat : le template `/recap` et les plans générés ne respectent pas les conventions CLAUDE.md (box-drawing, trees).
+Objectif : aligner le template `/recap` sur les conventions de formatting.
 
+════════════════════════════════════════
 ## Résultat
-**Status: Complété ✓**
-Draft créé dans Gmail rodolphe, dans le thread existant "Claude x Hoji". Prêt à relire et envoyer.
+════════════════════════════════════════
+**Status: En cours**
+Session Gmail complétée. Fix /recap à implémenter.
+
+════════════════════════════════════════
+## Progression
+════════════════════════════════════════
+✓ Gmail re-auth — rodlecoent + rodolphe
+✓ Draft workshop Hoji créé (thread "Claude x Hoji", ID: r-4912783213965777119)
+✓ Diagnostic formatting — template vs conventions audité
+
+════════════════════════════════════════
+## Plan — Fix /recap template
+════════════════════════════════════════
+Fichier : `~/Code/rodlc/dotfiles/claude/commands/recap.md`
+
+Problème : contradiction interne
+├── Lignes 66-71 : prescrivent box-drawing, trees, frames
+└── Lignes 36-57 : template utilise `##` markdown + `-` bullets
+
+──── Changements ────
+
+**1. Template sections (lignes 36-57)** → remplacer par box-drawing
+
+Avant :
+```
+## Résultat
+**Status: [...]**
 
 ## Progression
-✓ Gmail re-auth — rodlecoent + rodolphe (OAuth flow complété pour les 2 comptes)
-✓ Recherche "hoji" — 10 emails trouvés (thread "Claude x Hoji", rodolphe account)
-✓ Contexte reconstitué — démo 6 fév → JC bloque 3 mars PM le 13 fév, attend use cases
-✓ Draft créé (ID: r-4912783213965777119, threadId: 19c1f30244f81120)
-  → To: stephane@hojiventures.com + jc@hojiventures.com
-  → Programme 4 blocs, 4 questions (use cases/participants/salle/heure), Raycast, 750€ HT
-
-## Learnings
-- `mcp__gmail__draft_email` : le tool `to` attend un array → doit être chargé via ToolSearch avant appel
-- Gmail MCP auth : `node dist/index.js auth` avec GMAIL_OAUTH_PATH + GMAIL_CREDENTIALS_PATH
-- Tokens GCP Testing mode expirent tous les 7 jours → long-term fix = publish app (Testing → Production)
+✓ [...]
 
 ## Next Steps
-► Relire draft dans Gmail et envoyer
-► Long-term : GCP OAuth → publish app (Testing → Production) pour éviter re-auth hebdomadaire
+► [...]
+```
+
+Après :
+```
+═══════════════════════
+Résultat
+═══════════════════════
+Status: [En cours | Complété ✓ | Bloqué ⚠]
+[≤ 3 lignes]
+
+═══════════════════════
+Progression
+═══════════════════════
+✓ [completed — condense clusters > 5]
+⚠ [blockers]
+
+──── Learnings (optional) ────
+├── [insight 1]
+└── [insight 2]
+
+═══════════════════════
+Next Steps
+═══════════════════════
+► [actions restantes]
+```
+
+**2. Section Formatting (lignes 66-71)** → ajouter exemple concret
+
+Ajouter après la liste de conventions :
+```
+Example output:
+═══════════════════════
+Résultat
+═══════════════════════
+Status: Complété ✓
+Auth flow implémenté, 3 endpoints + tests.
+
+═══════════════════════
+Progression
+═══════════════════════
+✓ Auth flow — 3 endpoints + tests
+✓ DB migration — users table
+
+──── Learnings ────
+├── OAuth token refresh nécessite scope offline
+└── Zod validation avant MCP call
+
+═══════════════════════
+Next Steps
+═══════════════════════
+► Deploy staging
+```
+
+**3. Conserver** : `# Titre` en H1 markdown (compatibilité plan mode system-reminder)
+
+════════════════════════════════════════
+## Learnings
+════════════════════════════════════════
+├── `mcp__gmail__draft_email` `to` → array, charger via ToolSearch d'abord
+├── Gmail auth : `node dist/index.js auth` + GMAIL_OAUTH_PATH/CREDENTIALS_PATH
+└── GCP Testing mode → tokens 7 jours, fix = publish app
+
+════════════════════════════════════════
+## Next Steps
+════════════════════════════════════════
+► Appliquer les 2 changements dans `recap.md`
+► Relire draft Gmail et envoyer
+► Long-term : GCP OAuth Testing → Production
