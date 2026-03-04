@@ -234,7 +234,7 @@ async function loadCredentials() {
             oauth2Clients.set(accountName, client);
 
             // Set legacy oauth2Client for backward compatibility
-            if (accountName === 'default' || accountConfigs.size === 1) {
+            if (!oauth2Client) {
                 oauth2Client = client;
             }
         }
