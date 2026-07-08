@@ -586,6 +586,25 @@ async function main() {
             let message: string;
 
             try {
+                // Auto-resolve In-Reply-To from threadId when not explicitly provided
+                if (validatedArgs.threadId && !validatedArgs.inReplyTo) {
+                    const thread = await gmail.users.threads.get({
+                        userId: 'me',
+                        id: validatedArgs.threadId,
+                        format: 'METADATA',
+                        metadataHeaders: ['Message-ID'],
+                    });
+                    const messages = thread.data.messages || [];
+                    if (messages.length > 0) {
+                        const lastMsg = messages[messages.length - 1];
+                        const msgIdHeader = lastMsg.payload?.headers?.find(
+                            (h: any) => h.name?.toLowerCase() === 'message-id'
+                        );
+                        if (msgIdHeader?.value) {
+                            validatedArgs.inReplyTo = msgIdHeader.value;
+                        }
+                    }
+                }
                 // Check if we have attachments
                 if (validatedArgs.attachments && validatedArgs.attachments.length > 0) {
                     // Use Nodemailer to create properly formatted RFC822 message
