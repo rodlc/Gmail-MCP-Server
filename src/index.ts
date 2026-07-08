@@ -318,6 +318,20 @@ const SendEmailSchema = z.object({
     attachments: z.array(z.string()).optional().describe("List of file paths to attach to the email"),
 });
 
+const SendDraftSchema = z.object({
+    account: accountSchema,
+    draftId: z.string().describe("ID of the draft to send (returned by draft_email)"),
+});
+
+const DeleteDraftSchema = z.object({
+    account: accountSchema,
+    draftId: z.string().describe("ID of the draft to delete"),
+});
+
+const UpdateDraftSchema = SendEmailSchema.extend({
+    draftId: z.string().describe("ID of the draft to update"),
+});
+
 const ReadEmailSchema = z.object({
     account: accountSchema,
     messageId: z.string().describe("ID of the email message to retrieve"),
@@ -484,6 +498,21 @@ async function main() {
                 inputSchema: zodToJsonSchema(SendEmailSchema),
             },
             {
+                name: "send_draft",
+                description: "Send an existing draft email",
+                inputSchema: zodToJsonSchema(SendDraftSchema),
+            },
+            {
+                name: "update_draft",
+                description: "Update an existing draft email (replaces content, keeps draft ID)",
+                inputSchema: zodToJsonSchema(UpdateDraftSchema),
+            },
+            {
+                name: "delete_draft",
+                description: "Delete a draft email",
+                inputSchema: zodToJsonSchema(DeleteDraftSchema),
+            },
+            {
                 name: "read_email",
                 description: "Retrieves the content of a specific email",
                 inputSchema: zodToJsonSchema(ReadEmailSchema),
@@ -586,22 +615,27 @@ async function main() {
             let message: string;
 
             try {
-                // Auto-resolve In-Reply-To from threadId when not explicitly provided
+                // Auto-resolve In-Reply-To + References from threadId
                 if (validatedArgs.threadId && !validatedArgs.inReplyTo) {
                     const thread = await gmail.users.threads.get({
                         userId: 'me',
                         id: validatedArgs.threadId,
                         format: 'METADATA',
-                        metadataHeaders: ['Message-ID'],
+                        metadataHeaders: ['Message-ID', 'References'],
                     });
                     const messages = thread.data.messages || [];
                     if (messages.length > 0) {
                         const lastMsg = messages[messages.length - 1];
-                        const msgIdHeader = lastMsg.payload?.headers?.find(
-                            (h: any) => h.name?.toLowerCase() === 'message-id'
-                        );
-                        if (msgIdHeader?.value) {
-                            validatedArgs.inReplyTo = msgIdHeader.value;
+                        const getHeader = (name: string) =>
+                            lastMsg.payload?.headers?.find(
+                                (h: any) => h.name?.toLowerCase() === name.toLowerCase()
+                            )?.value;
+                        const parentMsgId = getHeader('Message-ID');
+                        if (parentMsgId) {
+                            validatedArgs.inReplyTo = parentMsgId;
+                            const parentRefs = getHeader('References');
+                            validatedArgs.references = [parentRefs, parentMsgId]
+                                .filter(Boolean).join(' ');
                         }
                     }
                 }
@@ -765,6 +799,84 @@ async function main() {
                     const validatedArgs = SendEmailSchema.parse(args);
                     const action = "draft";
                     return await handleEmailAction(action, validatedArgs);
+                }
+
+                case "send_draft": {
+                    const validatedArgs = SendDraftSchema.parse(args);
+                    const gmail = getGmailAPI(validatedArgs.account);
+                    const response = await gmail.users.drafts.send({
+                        userId: 'me',
+                        requestBody: { id: validatedArgs.draftId },
+                    });
+                    return {
+                        content: [{ type: "text",
+                            text: `Draft ${validatedArgs.draftId} sent successfully as message ID: ${response.data.id}` }],
+                    };
+                }
+
+                case "update_draft": {
+                    const validatedArgs = UpdateDraftSchema.parse(args);
+                    const { draftId, ...messageArgs } = validatedArgs;
+                    const gmail = getGmailAPI(validatedArgs.account);
+
+                    // Auto-resolve In-Reply-To + References (same logic as handleEmailAction)
+                    if (messageArgs.threadId && !messageArgs.inReplyTo) {
+                        const thread = await gmail.users.threads.get({
+                            userId: 'me',
+                            id: messageArgs.threadId,
+                            format: 'METADATA',
+                            metadataHeaders: ['Message-ID', 'References'],
+                        });
+                        const messages = thread.data.messages || [];
+                        if (messages.length > 0) {
+                            const lastMsg = messages[messages.length - 1];
+                            const getHeader = (name: string) =>
+                                lastMsg.payload?.headers?.find(
+                                    (h: any) => h.name?.toLowerCase() === name.toLowerCase()
+                                )?.value;
+                            const parentMsgId = getHeader('Message-ID');
+                            if (parentMsgId) {
+                                messageArgs.inReplyTo = parentMsgId;
+                                const parentRefs = getHeader('References');
+                                messageArgs.references = [parentRefs, parentMsgId]
+                                    .filter(Boolean).join(' ');
+                            }
+                        }
+                    }
+
+                    let message: string;
+                    if (messageArgs.attachments && messageArgs.attachments.length > 0) {
+                        message = await createEmailWithNodemailer(messageArgs);
+                    } else {
+                        message = createEmailMessage(messageArgs);
+                    }
+                    const encodedMessage = Buffer.from(message).toString('base64')
+                        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    const messageRequest: any = { raw: encodedMessage };
+                    if (messageArgs.threadId) messageRequest.threadId = messageArgs.threadId;
+
+                    await gmail.users.drafts.update({
+                        userId: 'me',
+                        id: draftId,
+                        requestBody: { message: messageRequest },
+                    });
+                    return {
+                        content: [{ type: "text",
+                            text: `Draft ${draftId} updated successfully` }],
+                    };
+                }
+
+                case "delete_draft": {
+                    const validatedArgs = DeleteDraftSchema.parse(args);
+                    const gmail = getGmailAPI(validatedArgs.account);
+                    await gmail.users.drafts.delete({
+                        userId: 'me',
+                        id: validatedArgs.draftId,
+                    });
+                    return {
+                        content: [{ type: "text",
+                            text: `Draft ${validatedArgs.draftId} deleted successfully` }],
+                    };
                 }
 
                 case "read_email": {
