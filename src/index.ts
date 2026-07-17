@@ -318,10 +318,6 @@ const SendEmailSchema = z.object({
     attachments: z.array(z.string()).optional().describe("List of file paths to attach to the email"),
 });
 
-const SendDraftSchema = z.object({
-    account: accountSchema,
-    draftId: z.string().describe("ID of the draft to send (returned by draft_email)"),
-});
 
 const DeleteDraftSchema = z.object({
     account: accountSchema,
@@ -496,11 +492,6 @@ async function main() {
                 name: "draft_email",
                 description: "Draft a new email",
                 inputSchema: zodToJsonSchema(SendEmailSchema),
-            },
-            {
-                name: "send_draft",
-                description: "Send an existing draft email",
-                inputSchema: zodToJsonSchema(SendDraftSchema),
             },
             {
                 name: "update_draft",
@@ -801,18 +792,6 @@ async function main() {
                     return await handleEmailAction(action, validatedArgs);
                 }
 
-                case "send_draft": {
-                    const validatedArgs = SendDraftSchema.parse(args);
-                    const gmail = getGmailAPI(validatedArgs.account);
-                    const response = await gmail.users.drafts.send({
-                        userId: 'me',
-                        requestBody: { id: validatedArgs.draftId },
-                    });
-                    return {
-                        content: [{ type: "text",
-                            text: `Draft ${validatedArgs.draftId} sent successfully as message ID: ${response.data.id}` }],
-                    };
-                }
 
                 case "update_draft": {
                     const validatedArgs = UpdateDraftSchema.parse(args);
