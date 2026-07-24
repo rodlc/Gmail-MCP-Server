@@ -497,12 +497,12 @@ async function main() {
             {
                 name: "update_draft",
                 description: "Update an existing draft email (replaces content, keeps draft ID)",
-                inputSchema: zodToJsonSchema(UpdateDraftSchema),
+                inputSchema: toSchema(UpdateDraftSchema),
             },
             {
                 name: "delete_draft",
                 description: "Delete a draft email",
-                inputSchema: zodToJsonSchema(DeleteDraftSchema),
+                inputSchema: toSchema(DeleteDraftSchema),
             },
             {
                 name: "read_email",
@@ -812,7 +812,7 @@ async function main() {
                             if (parentMsgId) {
                                 messageArgs.inReplyTo = parentMsgId;
                                 const parentRefs = getHeader('References');
-                                messageArgs.references = [parentRefs, parentMsgId]
+                                (messageArgs as any).references = [parentRefs, parentMsgId]
                                     .filter(Boolean).join(' ');
                             }
                         }
