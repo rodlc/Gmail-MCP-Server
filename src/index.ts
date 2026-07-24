@@ -9,6 +9,12 @@ import {
 import { google } from 'googleapis';
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
+
+// Wrapper with an `any` param: zodToJsonSchema's precise ZodTypeAny inference
+// hits TS2589 "Type instantiation excessively deep" (OOM pre-error) on these schemas.
+function toSchema(schema: any): object {
+    return zodToJsonSchema(schema);
+}
 import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import path from 'path';
@@ -484,14 +490,9 @@ async function main() {
     server.setRequestHandler(ListToolsRequestSchema, async () => {
         const allTools = [
             {
-                name: "send_email",
-                description: "Sends a new email",
-                inputSchema: zodToJsonSchema(SendEmailSchema),
-            },
-            {
                 name: "draft_email",
                 description: "Draft a new email",
-                inputSchema: zodToJsonSchema(SendEmailSchema),
+                inputSchema: toSchema(SendEmailSchema),
             },
             {
                 name: "update_draft",
@@ -506,87 +507,87 @@ async function main() {
             {
                 name: "read_email",
                 description: "Retrieves the content of a specific email",
-                inputSchema: zodToJsonSchema(ReadEmailSchema),
+                inputSchema: toSchema(ReadEmailSchema),
             },
             {
                 name: "search_emails",
                 description: "Searches for emails using Gmail search syntax",
-                inputSchema: zodToJsonSchema(SearchEmailsSchema),
+                inputSchema: toSchema(SearchEmailsSchema),
             },
             {
                 name: "modify_email",
                 description: "Modifies email labels (move to different folders)",
-                inputSchema: zodToJsonSchema(ModifyEmailSchema),
+                inputSchema: toSchema(ModifyEmailSchema),
             },
             {
                 name: "delete_email",
                 description: "Permanently deletes an email",
-                inputSchema: zodToJsonSchema(DeleteEmailSchema),
+                inputSchema: toSchema(DeleteEmailSchema),
             },
             {
                 name: "list_email_labels",
                 description: "Retrieves all available Gmail labels",
-                inputSchema: zodToJsonSchema(ListEmailLabelsSchema),
+                inputSchema: toSchema(ListEmailLabelsSchema),
             },
             {
                 name: "batch_modify_emails",
                 description: "Modifies labels for multiple emails in batches",
-                inputSchema: zodToJsonSchema(BatchModifyEmailsSchema),
+                inputSchema: toSchema(BatchModifyEmailsSchema),
             },
             {
                 name: "batch_delete_emails",
                 description: "Permanently deletes multiple emails in batches",
-                inputSchema: zodToJsonSchema(BatchDeleteEmailsSchema),
+                inputSchema: toSchema(BatchDeleteEmailsSchema),
             },
             {
                 name: "create_label",
                 description: "Creates a new Gmail label",
-                inputSchema: zodToJsonSchema(CreateLabelSchema),
+                inputSchema: toSchema(CreateLabelSchema),
             },
             {
                 name: "update_label",
                 description: "Updates an existing Gmail label",
-                inputSchema: zodToJsonSchema(UpdateLabelSchema),
+                inputSchema: toSchema(UpdateLabelSchema),
             },
             {
                 name: "delete_label",
                 description: "Deletes a Gmail label",
-                inputSchema: zodToJsonSchema(DeleteLabelSchema),
+                inputSchema: toSchema(DeleteLabelSchema),
             },
             {
                 name: "get_or_create_label",
                 description: "Gets an existing label by name or creates it if it doesn't exist",
-                inputSchema: zodToJsonSchema(GetOrCreateLabelSchema),
+                inputSchema: toSchema(GetOrCreateLabelSchema),
             },
             {
                 name: "create_filter",
                 description: "Creates a new Gmail filter with custom criteria and actions",
-                inputSchema: zodToJsonSchema(CreateFilterSchema),
+                inputSchema: toSchema(CreateFilterSchema),
             },
             {
                 name: "list_filters",
                 description: "Retrieves all Gmail filters",
-                inputSchema: zodToJsonSchema(ListFiltersSchema),
+                inputSchema: toSchema(ListFiltersSchema),
             },
             {
                 name: "get_filter",
                 description: "Gets details of a specific Gmail filter",
-                inputSchema: zodToJsonSchema(GetFilterSchema),
+                inputSchema: toSchema(GetFilterSchema),
             },
             {
                 name: "delete_filter",
                 description: "Deletes a Gmail filter",
-                inputSchema: zodToJsonSchema(DeleteFilterSchema),
+                inputSchema: toSchema(DeleteFilterSchema),
             },
             {
                 name: "create_filter_from_template",
                 description: "Creates a filter using a pre-defined template for common scenarios",
-                inputSchema: zodToJsonSchema(CreateFilterFromTemplateSchema),
+                inputSchema: toSchema(CreateFilterFromTemplateSchema),
             },
             {
                 name: "download_attachment",
                 description: "Downloads an email attachment to a specified location",
-                inputSchema: zodToJsonSchema(DownloadAttachmentSchema),
+                inputSchema: toSchema(DownloadAttachmentSchema),
             },
         ];
 
@@ -780,12 +781,6 @@ async function main() {
 
         try {
             switch (name) {
-                case "send_email": {
-                    const validatedArgs = SendEmailSchema.parse(args);
-                    const action = "send";
-                    return await handleEmailAction(action, validatedArgs);
-                }
-
                 case "draft_email": {
                     const validatedArgs = SendEmailSchema.parse(args);
                     const action = "draft";
