@@ -78,11 +78,15 @@ const OAUTH_PATH = process.env.GMAIL_OAUTH_PATH || path.join(CONFIG_DIR, 'gcp-oa
 const CREDENTIALS_PATH = process.env.GMAIL_CREDENTIALS_PATH || path.join(CONFIG_DIR, 'credentials.json');
 // OAuth2 configuration - support for multiple accounts
 const oauth2Clients = new Map();
-let oauth2Client; // Legacy single-account support
+const accountEmails = new Map();
+let oauth2Client;
 // Helper to get OAuth2 client for an account
 function getOAuth2Client(account) {
-    if (!account || accountConfigs.size === 1) {
-        // Single-account mode or no account specified
+    if (!account) {
+        if (accountConfigs.size > 1) {
+            const names = Array.from(oauth2Clients.keys()).join(', ');
+            throw new Error(`Multiple accounts configured, specify account: ${names}`);
+        }
         return oauth2Client;
     }
     const client = oauth2Clients.get(account.toLowerCase());
@@ -176,6 +180,18 @@ async function loadCredentials() {
             process.exit(1);
         }
         console.log(`Loaded ${oauth2Clients.size} account(s): ${Array.from(oauth2Clients.keys()).join(', ')}`);
+        for (const [name, client] of oauth2Clients.entries()) {
+            try {
+                const gmail = google.gmail({ version: 'v1', auth: client });
+                const profile = await gmail.users.getProfile({ userId: 'me' });
+                if (profile.data.emailAddress) {
+                    accountEmails.set(name, profile.data.emailAddress);
+                }
+            }
+            catch {
+                console.error(`Warning: could not fetch profile for account '${name}'`);
+            }
+        }
     }
     catch (error) {
         console.error('Error loading credentials:', error);
@@ -188,6 +204,7 @@ async function authenticate() {
     return new Promise((resolve, reject) => {
         const authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
+            prompt: 'consent',
             scope: [
                 'https://www.googleapis.com/auth/gmail.modify',
                 'https://www.googleapis.com/auth/gmail.settings.basic'
@@ -227,7 +244,7 @@ async function authenticate() {
 const accountSchema = z.string()
     .regex(/^[a-z0-9_-]{1,64}$/)
     .optional()
-    .describe("Account nickname (e.g., 'rodlecoent', 'rodolphe'). Optional if only one account configured.");
+    .describe("Account nickname");
 const SendEmailSchema = z.object({
     account: accountSchema,
     to: z.array(z.string()).describe("List of recipient email addresses"),
@@ -372,13 +389,7 @@ async function main() {
         process.exit(0);
     }
     // Server implementation
-    const server = new Server({
-        name: "gmail",
-        version: "1.0.0",
-        capabilities: {
-            tools: {},
-        },
-    });
+    const server = new Server({ name: "gmail", version: "1.0.0" }, { capabilities: { tools: {} } });
     // Tool handlers
     server.setRequestHandler(ListToolsRequestSchema, async () => {
         const allTools = [
@@ -483,6 +494,26 @@ async function main() {
                 inputSchema: toSchema(DownloadAttachmentSchema),
             },
         ];
+        // Inject dynamic account description and required flag
+        const isMultiAccount = oauth2Clients.size > 1;
+        if (isMultiAccount) {
+            const entries = Array.from(oauth2Clients.keys()).map(name => {
+                const email = accountEmails.get(name);
+                return email ? `${name} (${email})` : name;
+            });
+            const desc = `Required. Available: ${entries.join(', ')}`;
+            for (const tool of allTools) {
+                const schema = tool.inputSchema;
+                if (schema?.properties?.account) {
+                    schema.properties.account.description = desc;
+                    if (!schema.required)
+                        schema.required = [];
+                    if (!schema.required.includes('account')) {
+                        schema.required.push('account');
+                    }
+                }
+            }
+        }
         // Filter tools if enabledTools is specified
         const tools = enabledToolsSet
             ? allTools.filter(tool => enabledToolsSet.has(tool.name))

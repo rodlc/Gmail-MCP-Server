@@ -46,13 +46,12 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/mime-types": "^2.1.4",
-    "google-auth-library": "^9.4.1",
-    "googleapis": "^129.0.0",
-    "mcp-evals": "^1.0.18",
+    "google-auth-library": "^10.0.0",
+    "googleapis": "^173.0.0",
     "mime-types": "^3.0.1",
-    "nodemailer": "^7.0.3",
+    "nodemailer": "^9.0.3",
     "open": "^10.0.0",
     "yargs": "^17.7.2",
     "zod": "^3.22.4",
