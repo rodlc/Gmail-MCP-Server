@@ -411,11 +411,13 @@ async function main() {
             {
                 name: "read_email",
                 description: "Retrieves the content of a specific email",
+                annotations: { readOnlyHint: true },
                 inputSchema: toSchema(ReadEmailSchema),
             },
             {
                 name: "search_emails",
                 description: "Searches for emails using Gmail search syntax",
+                annotations: { readOnlyHint: true },
                 inputSchema: toSchema(SearchEmailsSchema),
             },
             {
@@ -431,6 +433,7 @@ async function main() {
             {
                 name: "list_email_labels",
                 description: "Retrieves all available Gmail labels",
+                annotations: { readOnlyHint: true },
                 inputSchema: toSchema(ListEmailLabelsSchema),
             },
             {
@@ -471,11 +474,13 @@ async function main() {
             {
                 name: "list_filters",
                 description: "Retrieves all Gmail filters",
+                annotations: { readOnlyHint: true },
                 inputSchema: toSchema(ListFiltersSchema),
             },
             {
                 name: "get_filter",
                 description: "Gets details of a specific Gmail filter",
+                annotations: { readOnlyHint: true },
                 inputSchema: toSchema(GetFilterSchema),
             },
             {
