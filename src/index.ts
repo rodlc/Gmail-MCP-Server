@@ -822,6 +822,20 @@ async function main() {
             switch (name) {
                 case "draft_email": {
                     const validatedArgs = SendEmailSchema.parse(args);
+                    // Auto-cleanup: delete existing drafts on this thread before creating a new one
+                    if (validatedArgs.threadId) {
+                        const gmail = getGmailAPI(validatedArgs.account);
+                        const draftsRes = await gmail.users.drafts.list({ userId: 'me' });
+                        const allDrafts = draftsRes.data.drafts || [];
+                        for (const d of allDrafts) {
+                            if (d.id) {
+                                const full = await gmail.users.drafts.get({ userId: 'me', id: d.id });
+                                if (full.data.message?.threadId === validatedArgs.threadId) {
+                                    await gmail.users.drafts.delete({ userId: 'me', id: d.id });
+                                }
+                            }
+                        }
+                    }
                     const action = "draft";
                     return await handleEmailAction(action, validatedArgs);
                 }
