@@ -654,7 +654,8 @@ async function main() {
                         format: 'METADATA',
                         metadataHeaders: ['Message-ID', 'References'],
                     });
-                    const messages = thread.data.messages || [];
+                    // A draft is never the parent: replying to it hides the new draft from the thread view
+                    const messages = (thread.data.messages || []).filter((m: any) => !m.labelIds?.includes('DRAFT'));
                     if (messages.length > 0) {
                         const lastMsg = messages[messages.length - 1];
                         const getHeader = (name: string) =>
@@ -854,7 +855,8 @@ async function main() {
                             format: 'METADATA',
                             metadataHeaders: ['Message-ID', 'References'],
                         });
-                        const messages = thread.data.messages || [];
+                        // The draft being updated is the last thread message: it must not reply to itself
+                        const messages = (thread.data.messages || []).filter((m: any) => !m.labelIds?.includes('DRAFT'));
                         if (messages.length > 0) {
                             const lastMsg = messages[messages.length - 1];
                             const getHeader = (name: string) =>
