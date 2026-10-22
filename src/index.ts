@@ -25,7 +25,7 @@ import os from 'os';
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import {createEmailMessage, createEmailWithNodemailer} from "./utl.js";
-import { withSendAs } from "./signature.js";
+import { withSendAs, listSendAsAddresses } from "./signature.js";
 import { createLabel, updateLabel, deleteLabel, listLabels, findLabelByName, getOrCreateLabel, GmailLabel } from "./label-manager.js";
 import { createFilter, listFilters, getFilter, deleteFilter, filterTemplates, GmailFilterCriteria, GmailFilterAction } from "./filter-manager.js";
 
@@ -133,6 +133,7 @@ interface EmailContent {
 // OAuth2 configuration - support for multiple accounts
 const oauth2Clients = new Map<string, OAuth2Client>();
 const accountEmails = new Map<string, string>();
+const accountSendAs = new Map<string, string[]>();
 let oauth2Client: OAuth2Client;
 
 // Helper to get OAuth2 client for an account
@@ -264,6 +265,7 @@ async function loadCredentials() {
                 if (profile.data.emailAddress) {
                     accountEmails.set(name, profile.data.emailAddress);
                 }
+                accountSendAs.set(name, await listSendAsAddresses(gmail));
             } catch {
                 console.error(`Warning: could not fetch profile for account '${name}'`);
             }
@@ -630,6 +632,14 @@ async function main() {
                         schema.required.push('account');
                     }
                 }
+            }
+        }
+
+        const sendAsEntries = Array.from(accountSendAs.entries()).map(([name, addresses]) => `${name}: ${addresses.join(', ')}`);
+        if (sendAsEntries.length > 0) {
+            for (const tool of allTools) {
+                const from = (tool.inputSchema as any)?.properties?.from;
+                if (from) from.description += `. Verified per account: ${sendAsEntries.join('; ')}`;
             }
         }
 

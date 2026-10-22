@@ -20,6 +20,13 @@ export async function resolveSendAs(gmail: gmail_v1.Gmail, from?: string): Promi
     return entry;
 }
 
+export async function listSendAsAddresses(gmail: gmail_v1.Gmail): Promise<string[]> {
+    const response = await gmail.users.settings.sendAs.list({ userId: 'me' });
+    return (response.data.sendAs || [])
+        .filter(s => s.isPrimary || s.verificationStatus === 'accepted')
+        .map(s => s.isDefault ? `${s.sendAsEmail} (default)` : s.sendAsEmail || '');
+}
+
 export function htmlToText(html: string): string {
     return html
         .replace(/<br\s*\/?>/gi, '\n')
