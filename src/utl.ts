@@ -21,10 +21,19 @@ export const validateEmail = (email: string): boolean => {
     return emailRegex.test(email);
 };
 
+// RFC 2047: an encoded word cannot sit inside a quoted string
+function fromHeader(validatedArgs: any): string {
+    const { from, fromName } = validatedArgs;
+    if (!from) return 'me';
+    if (!fromName) return from;
+    const name = /[^\x00-\x7F]/.test(fromName) ? encodeEmailHeader(fromName) : `"${fromName.replace(/"/g, '\\"')}"`;
+    return `${name} <${from}>`;
+}
+
 export function createEmailMessage(validatedArgs: any): string {
     const encodedSubject = encodeEmailHeader(validatedArgs.subject);
     // Determine content type based on available content and explicit mimeType
-    let mimeType = validatedArgs.mimeType || 'text/plain';
+    let mimeType = validatedArgs.mimeType || (validatedArgs.htmlBody ? 'multipart/alternative' : 'text/plain');
     
     // If htmlBody is provided and mimeType isn't explicitly set to text/plain,
     // use multipart/alternative to include both versions
@@ -44,7 +53,7 @@ export function createEmailMessage(validatedArgs: any): string {
 
     // Common email headers
     const emailParts = [
-        'From: me',
+        `From: ${fromHeader(validatedArgs)}`,
         `To: ${validatedArgs.to.join(', ')}`,
         validatedArgs.cc ? `Cc: ${validatedArgs.cc.join(', ')}` : '',
         validatedArgs.bcc ? `Bcc: ${validatedArgs.bcc.join(', ')}` : '',
@@ -128,7 +137,7 @@ export async function createEmailWithNodemailer(validatedArgs: any): Promise<str
     }
 
     const mailOptions = {
-        from: 'me', // Gmail API will replace this with the authenticated user
+        from: validatedArgs.from ? { name: validatedArgs.fromName || '', address: validatedArgs.from } : 'me',
         to: validatedArgs.to.join(', '),
         cc: validatedArgs.cc?.join(', '),
         bcc: validatedArgs.bcc?.join(', '),

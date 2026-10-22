@@ -25,6 +25,7 @@ import os from 'os';
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import {createEmailMessage, createEmailWithNodemailer} from "./utl.js";
+import { withSendAs } from "./signature.js";
 import { createLabel, updateLabel, deleteLabel, listLabels, findLabelByName, getOrCreateLabel, GmailLabel } from "./label-manager.js";
 import { createFilter, listFilters, getFilter, deleteFilter, filterTemplates, GmailFilterCriteria, GmailFilterAction } from "./filter-manager.js";
 
@@ -333,7 +334,8 @@ const SendEmailSchema = z.object({
     subject: z.string().describe("Email subject"),
     body: z.string().describe("Email body content (used for text/plain or when htmlBody not provided)"),
     htmlBody: z.string().optional().describe("HTML version of the email body"),
-    mimeType: z.enum(['text/plain', 'text/html', 'multipart/alternative']).optional().default('text/plain').describe("Email content type"),
+    mimeType: z.enum(['text/plain', 'text/html', 'multipart/alternative']).optional().describe("Email content type; defaults to multipart/alternative when htmlBody is set, text/plain otherwise"),
+    from: z.string().email().optional().describe("Verified send-as address to send from; its Gmail signature is appended. Defaults to the account's default address"),
     cc: z.array(z.string()).optional().describe("List of CC recipients"),
     bcc: z.array(z.string()).optional().describe("List of BCC recipients"),
     threadId: z.string().optional().describe("Thread ID to reply to"),
@@ -353,8 +355,7 @@ const UpdateDraftSchema = SendEmailSchema.extend({
 
 const ReadEmailSchema = z.object({
     account: accountSchema,
-    messageId: z.string().describe("ID of the email message to retrieve"),
-});
+    messageId: z.string().describe("ID of the email message to retrieve"),});
 
 const SearchEmailsSchema = z.object({
     account: accountSchema,
@@ -646,6 +647,7 @@ async function main() {
             let message: string;
 
             try {
+                validatedArgs = await withSendAs(gmail, validatedArgs);
                 // Auto-resolve In-Reply-To + References from threadId
                 if (validatedArgs.threadId && !validatedArgs.inReplyTo) {
                     const thread = await gmail.users.threads.get({
@@ -873,11 +875,12 @@ async function main() {
                         }
                     }
 
+                    const signedArgs = await withSendAs(gmail, messageArgs);
                     let message: string;
-                    if (messageArgs.attachments && messageArgs.attachments.length > 0) {
-                        message = await createEmailWithNodemailer(messageArgs);
+                    if (signedArgs.attachments && signedArgs.attachments.length > 0) {
+                        message = await createEmailWithNodemailer(signedArgs);
                     } else {
-                        message = createEmailMessage(messageArgs);
+                        message = createEmailMessage(signedArgs);
                     }
                     const encodedMessage = Buffer.from(message).toString('base64')
                         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
