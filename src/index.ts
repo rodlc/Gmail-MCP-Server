@@ -355,7 +355,9 @@ const UpdateDraftSchema = SendEmailSchema.extend({
 
 const ReadEmailSchema = z.object({
     account: accountSchema,
-    messageId: z.string().describe("ID of the email message to retrieve"),});
+    messageId: z.string().describe("ID of the email message to retrieve"),
+    includeHeaders: z.boolean().optional().describe("Also return the authentication headers (Authentication-Results, ARC-Authentication-Results, Received-SPF, DKIM-Signature)"),
+});
 
 const SearchEmailsSchema = z.object({
     account: accountSchema,
@@ -926,6 +928,10 @@ async function main() {
                     const to = headers.find(h => h.name?.toLowerCase() === 'to')?.value || '';
                     const date = headers.find(h => h.name?.toLowerCase() === 'date')?.value || '';
                     const threadId = response.data.threadId || '';
+                    const authenticationHeaderNames = ['authentication-results', 'arc-authentication-results', 'received-spf', 'dkim-signature'];
+                    const authenticationHeaders = validatedArgs.includeHeaders
+                        ? `\nHeaders:\n${headers.filter(h => authenticationHeaderNames.includes(h.name?.toLowerCase() || '')).map(h => `${h.name}: ${h.value}`).join('\n')}`
+                        : '';
 
                     // Extract email content using the recursive function
                     const { text, html } = extractEmailContent(response.data.payload as GmailMessagePart || {});
@@ -971,7 +977,7 @@ async function main() {
                         content: [
                             {
                                 type: "text",
-                                text: `Thread ID: ${threadId}\nSubject: ${subject}\nFrom: ${from}\nTo: ${to}\nDate: ${date}\n\n${contentTypeNote}${body}${attachmentInfo}`,
+                                text: `Thread ID: ${threadId}\nSubject: ${subject}\nFrom: ${from}\nTo: ${to}\nDate: ${date}${authenticationHeaders}\n\n${contentTypeNote}${body}${attachmentInfo}`,
                             },
                         ],
                     };
