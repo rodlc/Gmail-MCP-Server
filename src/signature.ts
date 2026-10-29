@@ -39,15 +39,24 @@ export function htmlToText(html: string): string {
         .trim();
 }
 
-// Mirrors the markup Gmail web inserts, so API drafts look like ones composed there
+export function textToHtml(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\r?\n/g, '<br>');
+}
+
+// A text/plain email cannot carry the signature's logo and links, so a body-only call gets an HTML part too
 export function withSignature(validatedArgs: any, signatureHtml?: string | null): any {
     if (!signatureHtml) return validatedArgs;
+    const htmlBody = validatedArgs.htmlBody ?? textToHtml(validatedArgs.body);
     return {
         ...validatedArgs,
-        body: `${validatedArgs.body}\n\n-- \n${htmlToText(signatureHtml)}`,
-        ...(validatedArgs.htmlBody && {
-            htmlBody: `${validatedArgs.htmlBody}<br><div class="gmail_signature">-- <br>${signatureHtml}</div>`,
-        }),
+        body: `${validatedArgs.body}\n\n${htmlToText(signatureHtml)}`,
+        htmlBody: `${htmlBody}<br><br><div class="gmail_signature">${signatureHtml}</div>`,
     };
 }
 
